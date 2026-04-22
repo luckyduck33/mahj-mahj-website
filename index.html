@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<!-- MAHJ MAHJ WEBSITE · mahjmahj.co · Marketing site · ~179KB · Title: "Mahj Mahj — A Modern Guide to Mahjong" -->
+<!-- MAHJ MAHJ WEBSITE · mahjmahj.co · Marketing site · ~183KB · Title: "Mahj Mahj — A Modern Guide to Mahjong" -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="MAHJ MAHJ is a community platform for mahjong players in the United States. Find local events, learn rules and strategy for Hong Kong Mahjong, Taiwanese Mahjong, and American Mahjong, and connect with players in cities across the US.">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W1TBW9XH3N"></script>
 <script>
@@ -1655,6 +1656,27 @@ a.news-card:hover h4 { color: var(--terra); }
   font-style: italic;
 }
 </style>
+
+<!-- Structured Data: Organization + WebSite -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "MAHJ MAHJ",
+  "url": "https://mahjmahj.co",
+  "description": "A community platform for mahjong players in the United States covering Hong Kong Mahjong, Taiwanese Mahjong, and American Mahjong.",
+  "sameAs": []
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "MAHJ MAHJ",
+  "url": "https://mahjmahj.co",
+  "description": "Find mahjong events, learn rules and strategy, and connect with players across the United States."
+}
+</script>
 </head>
 <body>
 
@@ -1696,6 +1718,7 @@ a.news-card:hover h4 { color: var(--terra); }
       <span class="hero-type-sep"></span>
       <span class="hero-type">Join a Table</span>
     </div>
+    <p class="hero-subtitle fade-up d3" style="max-width: 520px; text-align: center;">Hong Kong Mahjong, Taiwanese Mahjong, and American Mahjong — events, rules, and community across the US.</p>
     <div class="hero-actions fade-up d4">
       <a href="#events" class="btn-solid">Find a Table</a>
       <a href="#events" class="btn-ghost">Browse Events</a>
@@ -3295,6 +3318,64 @@ document.querySelectorAll('.ef-city').forEach(btn => {
       container.innerHTML = data.events.map(function(ev, i) { return renderEventCard(ev, i); }).join('\n');
       // Re-apply filters
       if (typeof filterEvents === 'function') filterEvents();
+
+      // Inject Schema.org Event JSON-LD for search engine discoverability
+      // NOTE: This is a client-side interim solution. Googlebot may or may not
+      // execute JS to see this markup. A durable solution requires SSR/SSG
+      // with pre-rendered event pages at crawlable URLs.
+      try {
+        var eventSchemas = data.events.map(function(ev) {
+          var schema = {
+            "@context": "https://schema.org",
+            "@type": "Event",
+            "name": ev.title || "Mahjong Event",
+            "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+            "eventStatus": "https://schema.org/EventScheduled",
+            "organizer": {
+              "@type": "Organization",
+              "name": "MAHJ MAHJ",
+              "url": "https://mahjmahj.co"
+            }
+          };
+          if (ev.date) {
+            var d = ev.date;
+            if (ev.time) {
+              var parts = ev.time.match(/(\d+):(\d+)\s*(am|pm)?/i);
+              if (parts) {
+                var hr = parseInt(parts[1]);
+                if (parts[3] && parts[3].toLowerCase() === 'pm' && hr < 12) hr += 12;
+                if (parts[3] && parts[3].toLowerCase() === 'am' && hr === 12) hr = 0;
+                schema.startDate = d + 'T' + String(hr).padStart(2,'0') + ':' + parts[2] + ':00';
+              } else {
+                schema.startDate = d;
+              }
+            } else {
+              schema.startDate = d;
+            }
+          }
+          if (ev.city || ev.neighborhood) {
+            schema.location = {
+              "@type": "Place",
+              "name": ev.neighborhood || ev.city || "TBD",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": ev.city || "",
+                "addressRegion": "",
+                "addressCountry": "US"
+              }
+            };
+          }
+          if (ev.description) schema.description = ev.description;
+          if (ev.styles && ev.styles.length) {
+            schema.description = (schema.description || '') + ' Styles: ' + ev.styles.join(', ') + '.';
+          }
+          return schema;
+        });
+        var schemaEl = document.createElement('script');
+        schemaEl.type = 'application/ld+json';
+        schemaEl.textContent = JSON.stringify(eventSchemas);
+        document.head.appendChild(schemaEl);
+      } catch(e) { console.warn('Event schema injection error:', e); }
     })
     .catch(function(err) {
       console.warn('Events API error:', err);
